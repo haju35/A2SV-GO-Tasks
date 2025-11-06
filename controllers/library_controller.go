@@ -3,29 +3,31 @@ package controllers
 import (
 	"bufio"
 	"fmt"
+	"library_management/concurrency"
 	"library_management/models"
 	"library_management/services"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func RunLibraryConsole() {
-	library := service.NewLibrary()
+	library := services.NewLibrary()
+	concurrency.StartConcurrentReservationWorker(library)
 
 	library.Members[1] = models.Member{ID: 1, Name: "Hajira"}
+	library.Members[2] = models.Member{ID: 2, Name: "Aisha"}
 
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
-		fmt.Println("\n=== Library Management System ===")
+		fmt.Println("\n=== Concurrent Library Management ===")
 		fmt.Println("1. Add Book")
-		fmt.Println("2. Remove Book")
-		fmt.Println("3. Borrow Book")
-		fmt.Println("4. Return Book")
-		fmt.Println("5. List Available Books")
-		fmt.Println("6. List Borrowed Books")
-		fmt.Println("7. Exit")
+		fmt.Println("2. Reserve Book")
+		fmt.Println("3. List Available Books")
+		fmt.Println("4. Simulate Concurrent Reservations")
+		fmt.Println("5. Exit")
 		fmt.Print("Enter your choice: ")
 
 		input, _ := reader.ReadString('\n')
@@ -53,14 +55,7 @@ func RunLibraryConsole() {
 			fmt.Println("Book added successfully!")
 
 		case 2:
-			fmt.Print("Enter Book ID to remove: ")
-			idStr, _ := reader.ReadString('\n')
-			id, _ := strconv.Atoi(strings.TrimSpace(idStr))
-			library.RemoveBook(id)
-			fmt.Println("Book removed successfully!")
-
-		case 3:
-			fmt.Print("Enter Book ID to borrow: ")
+			fmt.Print("Enter Book ID to reserve: ")
 			bookIDStr, _ := reader.ReadString('\n')
 			bookID, _ := strconv.Atoi(strings.TrimSpace(bookIDStr))
 
@@ -68,51 +63,30 @@ func RunLibraryConsole() {
 			memberIDStr, _ := reader.ReadString('\n')
 			memberID, _ := strconv.Atoi(strings.TrimSpace(memberIDStr))
 
-			err := library.BorrowBook(bookID, memberID)
+			err := library.ReserveBook(bookID, memberID)
 			if err != nil {
 				fmt.Println("Error:", err)
 			} else {
-				fmt.Println("Book borrowed successfully!")
+				fmt.Println("Book reserved successfully!")
+			}
+
+		case 3:
+			fmt.Println("📗 Available Books:")
+			for _, book := range library.ListAvailableBooks() {
+				fmt.Printf("ID: %d | Title: %s | Status: %s\n", book.ID, book.Title, book.Status)
 			}
 
 		case 4:
-			fmt.Print("Enter Book ID to return: ")
-			bookIDStr, _ := reader.ReadString('\n')
-			bookID, _ := strconv.Atoi(strings.TrimSpace(bookIDStr))
-
-			fmt.Print("Enter Member ID: ")
-			memberIDStr, _ := reader.ReadString('\n')
-			memberID, _ := strconv.Atoi(strings.TrimSpace(memberIDStr))
-
-			err := library.ReturnBook(bookID, memberID)
-			if err != nil {
-				fmt.Println("Error:", err)
-			} else {
-				fmt.Println("Book returned successfully!")
-			}
+			fmt.Println("Simulating concurrent reservations...")
+			go func() { fmt.Println(library.ReserveBook(1, 1)) }()
+			go func() { fmt.Println(library.ReserveBook(1, 2)) }()
+			time.Sleep(6 * time.Second)
 
 		case 5:
-			fmt.Println("Available Books:")
-			for _, book := range library.ListAvailableBooks() {
-				fmt.Printf("ID: %d | Title: %s | Author: %s\n", book.ID, book.Title, book.Author)
-			}
-
-		case 6:
-			fmt.Print("Enter Member ID: ")
-			memberIDStr, _ := reader.ReadString('\n')
-			memberID, _ := strconv.Atoi(strings.TrimSpace(memberIDStr))
-
-			fmt.Println("Borrowed Books:")
-			for _, book := range library.ListBorrowedBooks(memberID) {
-				fmt.Printf("ID: %d | Title: %s | Author: %s\n", book.ID, book.Title, book.Author)
-			}
-
-		case 7:
 			fmt.Println("Exiting...")
 			return
-
 		default:
-			fmt.Println("Invalid choice. Try again.")
+			fmt.Println("Invalid choice.")
 		}
 	}
 }
