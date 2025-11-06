@@ -13,6 +13,12 @@ Return Books
 List available Books
 List borrowed Books
 
+## concurrency feature
+
+Reserve books concurrently
+Goroutine worker
+Auto Expiration
+
 ## structure
 
 models
@@ -20,3 +26,5 @@ services
 controllers
 main.go
 docs
+
+
